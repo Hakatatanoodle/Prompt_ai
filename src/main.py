@@ -1,5 +1,19 @@
 from flask import Flask 
 from flask import request
+from google import genai 
+import os
+
+key  = os.getenv.Client('api_key')
+
+client = genai.Client(api_key = key)
+
+response = client.models.generate_content(
+    model = "gemini-2.5-flash", contents = "take the rough prompt , create an asumption of the objective of user based off the prompt , ask questions to clarify and understand the objective of user until , the ai clearly understands all aspects of users needs , then using prompt engineering concepts output an optimized version of the  rough prompt"
+)
+
+
+
+
 
 app = Flask(__name__)
 
