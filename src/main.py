@@ -1,19 +1,19 @@
 from flask import Flask 
 from flask import request
 from google import genai 
-import os
+from google.genai import types
+import os   
 
-key  = os.getenv.Client('api_key')
+key  = os.environ.get('api_key')
 
 client = genai.Client(api_key = key)
 
-response = client.models.generate_content(
-    model = "gemini-2.5-flash", contents = "take the rough prompt , create an asumption of the objective of user based off the prompt , ask questions to clarify and understand the objective of user until , the ai clearly understands all aspects of users needs , then using prompt engineering concepts output an optimized version of the  rough prompt"
+chat_session = client.chats.create(
+    model = "gemini-2.5-flash", 
+    config = types.GenerateContentConfig(
+        system_instruction = "take the rough prompt , create an asumption of the objective of user based off the prompt , ask questions to clarify and understand the objective of user until , the ai clearly understands all aspects of users needs , then using prompt engineering concepts output an optimized version of the  rough prompt"
 )
-
-
-
-
+) 
 
 app = Flask(__name__)
 
@@ -21,9 +21,11 @@ app = Flask(__name__)
 @app.route('/chat',methods = ['POST'])#methods is used to explicitely tell flask to accept POST
 def chat():
     data  = request.get_json()
-    print(data)
-    print(data["message"])
-    return "Message received !"
+    response = chat_session.send_message(data["message"])
+    print(response.text)
+    return response.text
+
+
 
 if __name__ == '__main__':
     app.run()
