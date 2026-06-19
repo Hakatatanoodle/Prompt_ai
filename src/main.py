@@ -1,7 +1,9 @@
 from flask import Flask 
 from flask import request
+from flask import render_template
 from google import genai 
 from google.genai import types
+
 import os   
 
 key  = os.environ.get('api_key')
@@ -26,8 +28,13 @@ def chat():
     return response.text
 
 
+@app.route('/')
+def root():
+    return 
 
-if __name__ == '__main__':
+
+
+if __name__ == '__main__':  
     app.run()
 
 
