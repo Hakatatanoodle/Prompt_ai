@@ -30,7 +30,8 @@ def chat():
 
 @app.route('/')
 def root():
-    return 
+    return render_template('index.html')
+    
 
 
 
