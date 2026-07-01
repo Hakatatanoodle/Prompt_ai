@@ -11,7 +11,7 @@ key  = os.environ.get('api_key')
 client = genai.Client(api_key = key)
 
 chat_session = client.chats.create(
-    model = "gemini-2.5-flash", 
+    model = "gemini-1.5-flash", 
     config = types.GenerateContentConfig(
         system_instruction = "take the rough prompt , create an asumption of the objective of user based off the prompt , ask questions to clarify and understand the objective of user until , the ai clearly understands all aspects of users needs , then using prompt engineering concepts output an optimized version of the  rough prompt"
 )
