@@ -10,7 +10,8 @@
     <h1>AI PROMPT OPTIMIZER</h1>
     <br>
     <textarea id="prompt" rows="10" cols="50" placeholder="Enter your prompt here..."></textarea>
-    <button id="optimize">Optimize Prompt</button>
+    <button onclick="sendMessage()">Optimize Prompt</button>
     <div id="conversation"></div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body> 
 </html>
