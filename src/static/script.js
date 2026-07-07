@@ -8,6 +8,7 @@ function sendMessage()
         },
         body:JSON.stringify({message: prompt.value})})
     .then(response=>response.text())
-    .then(data=> document.getElementById("conversation").innerHTML += "<p>"+data+"</p>")
+    .then(data=> document.getElementById("conversation").innerHTML += "<p>"+marked.parse(data)+"</p>")
+    document.getElementById("prompt").value = "";
 }
 
