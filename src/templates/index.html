@@ -13,6 +13,7 @@
     <textarea id="prompt" rows="10"  placeholder="Enter your prompt here..."></textarea>
     <button onclick="sendMessage()">Optimize Prompt</button>
     <div id="conversation"></div>
+    <div id="final_prompt"></div>
     <script src="https://cdn.jsdelivr.net/npm/marked@18.0.5/lib/marked.umd.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 

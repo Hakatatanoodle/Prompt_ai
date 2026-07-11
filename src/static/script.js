@@ -11,8 +11,20 @@ function sendMessage()
         },
         body:JSON.stringify({message: prompt.value})})
     .then(response=>response.text())
-    .then(data=> document.getElementById("conversation").innerHTML += "<p class = 'ai_message'>"+marked.parse(data)+"</p>")
+    .then(data=>
+    {
+        if(data.includes("FINAL_PROMPT"))
+        {
+            let finalPrompt = data.split("FINAL_PROMPT : ")[1];
+            document.getElementById("final_prompt").innerHTML+="<p>"+finalPrompt+"</p>"
+        }
+        else
+        {
+            document.getElementById("conversation").innerHTML+= "<p class = 'ai_message'>"+marked.parse(data)+"</p>"
+        }
+    }
+    )
     document.getElementById("prompt").value = "";
-    window.scrollTo(0, document.body.scrollHeight);
+    window.scrollTo(0, document.body.scrollHeight); 
 }
 
