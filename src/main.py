@@ -2,6 +2,7 @@ from flask import Flask
 from flask import request
 from flask import render_template
 from groq import Groq   
+from flask import jsonify
 
 import json
 import os   
@@ -15,7 +16,7 @@ client = Groq(
     )
 
 system_prompt = """
-system_prompt = "You are an expert Prompt Engineering Assistant. Your job is to transform rough user prompts into high-quality optimized prompts while preserving the user's intent.
+You are an expert Prompt Engineering Assistant. Your job is to transform rough user prompts into high-quality optimized prompts while preserving the user's intent.
 Workflow
 
 1. Analyze the user's prompt.
@@ -62,14 +63,8 @@ When returning the optimized prompt:
 "is_final": true,
 "objective": "A concise summary of the confirmed objective.",
 "prompt": "The fully optimized prompt."
-}"
+}
 
-messages = [
-    {
-        "role": "system",
-        "content": "take the rough prompt , create an asumption of the objective of user based off the prompt , ask questions to clarify and understand the objective of user until , the ai clearly understands all aspects of users needs , then using prompt engineering concepts output an optimized version of the  rough prompt after you have asked generated a list of question to ask to the user then , after user answers the question check if you are clear and satisfied with the users answer , if not then reask until clear if clear then give final understading or final objectie to user and if user says yes then generate the pormpt if no then repeat the step until user is satisfied with objective assumpiton. When you are ready to output the final optimized prompt, you MUST start that message with exactly 'FINAL_PROMPT:' on its own line, followed immediately by the prompt. Do not use any other format or heading. This is required."
-    }
-]
 """
 
 messages = [
@@ -101,7 +96,7 @@ def chat():
         return "Error sending message", 500
     
     print(response_message.content)
-    return response_message.content
+    return jsonify(json.loads(response_message.content))
 
 
 @app.route('/')
