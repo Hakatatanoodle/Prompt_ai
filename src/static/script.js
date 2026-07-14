@@ -10,17 +10,17 @@ function sendMessage()
         headers:{'Content-Type':'application/json'
         },
         body:JSON.stringify({message: prompt.value})})
-    .then(response=>response.text())
+    .then(response=>response.json())
     .then(data=>
     {
-        if(data.includes("FINAL_PROMPT:"))
+        if(data.is_final)
         {
-            let finalPrompt = data.split("FINAL_PROMPT:")[1];
+            let finalPrompt = data.prompt;
             document.getElementById("final_prompt").innerHTML+="<p>"+finalPrompt+"</p>"
         }
         else
         {
-            document.getElementById("conversation").innerHTML+= "<p class = 'ai_message'>"+marked.parse(data)+"</p>"
+            document.getElementById("conversation").innerHTML+= "<p class = 'ai_message'>"+data.message+"</p>"
         }
     }
     )
