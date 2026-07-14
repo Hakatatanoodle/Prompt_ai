@@ -3,7 +3,7 @@
 function sendMessage()
 {
     let prompt = document.getElementById("prompt");
-    if(prompt.value == "")
+    if(prompt.value == "") return;
     document.getElementById("conversation").innerHTML+="<p class = 'user_message'>" + prompt.value+ "</p>";
     fetch('/chat',{
         method:'POST',
@@ -13,9 +13,9 @@ function sendMessage()
     .then(response=>response.text())
     .then(data=>
     {
-        if(data.includes("FINAL_PROMPT"))
+        if(data.includes("FINAL_PROMPT:"))
         {
-            let finalPrompt = data.split("FINAL_PROMPT : ")[1];
+            let finalPrompt = data.split("FINAL_PROMPT:")[1];
             document.getElementById("final_prompt").innerHTML+="<p>"+finalPrompt+"</p>"
         }
         else
