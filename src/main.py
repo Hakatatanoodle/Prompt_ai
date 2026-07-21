@@ -7,8 +7,7 @@ from flask import jsonify
 import json
 import os   
 from dotenv import load_dotenv
-load_dotenv()
-
+load_dotenv('/home/hakatatanoodle/Projects/promt /.env')
 key  = os.getenv('api_key')
 
 client = Groq(

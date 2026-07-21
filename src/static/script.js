@@ -1,30 +1,35 @@
 
 
-function sendMessage()
-{
-    let prompt = document.getElementById("prompt");
-    if(prompt.value == "") return;
-    document.getElementById("conversation").innerHTML+="<p class = 'user_message'>" + prompt.value+ "</p>";
-    fetch('/chat',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'
-        },
-        body:JSON.stringify({message: prompt.value})})
-    .then(response=>response.json())
-    .then(data=>
+    function sendMessage()
     {
-        if(data.is_final)
+        let prompt = document.getElementById("prompt");
+        if(prompt.value == "") return;
+        document.getElementById("conversation").innerHTML+="<p class = 'user_message'>" + prompt.value+ "</p>";
+        fetch('/chat',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'
+            },
+            body:JSON.stringify({message: prompt.value})})
+        .then(response=>response.json())
+        .then(data=>
         {
-            let finalPrompt = data.prompt;
-            document.getElementById("final_prompt").innerHTML+="<p>"+finalPrompt+"</p>"
+            if(data.is_final)
+            {
+                let finalPrompt = data.prompt;
+                document.getElementById("final_prompt").innerHTML+="<p>"+finalPrompt+"</p>"
+            }
+            else
+            {
+                document.getElementById("conversation").innerHTML+= "<p class = 'ai_message'>"+data.message+"</p>"
+                if(data.questions)
+                {
+                    let questionList =  data.questions.map(q => "<li>"+q +"</li>").join("")
+                    document.getElementById("conversation").innerHTML+="<ol>"+questionList+"</ol>"
+                }
+            }
         }
-        else
-        {
-            document.getElementById("conversation").innerHTML+= "<p class = 'ai_message'>"+data.message+"</p>"
-        }
+        )
+        document.getElementById("prompt").value = "";
+        window.scrollTo(0, document.body.scrollHeight); 
     }
-    )
-    document.getElementById("prompt").value = "";
-    window.scrollTo(0, document.body.scrollHeight); 
-}
 
