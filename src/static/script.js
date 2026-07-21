@@ -1,5 +1,3 @@
-
-
     function sendMessage()
     {
         let prompt = document.getElementById("prompt");
@@ -32,4 +30,5 @@
         document.getElementById("prompt").value = "";
         window.scrollTo(0, document.body.scrollHeight); 
     }
+
 
