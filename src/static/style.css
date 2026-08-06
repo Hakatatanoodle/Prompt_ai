@@ -18,14 +18,23 @@ textarea {
 }
 
 button {
-    display: block;
-    margin: 8px 0;
+    display: inline-block;
+    margin: 8px 8px 8px 0;
     padding: 10px 20px;
     background-color: #4a4a4a;
     color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+button.secondary {
+    background-color: #8a8a8a;
 }
 
 .user_message {

@@ -1,18 +1,28 @@
-from flask import Flask 
-from flask import request
-from flask import render_template
-from groq import Groq   
-from flask import jsonify
-
 import json
-import os   
-from dotenv import load_dotenv
-load_dotenv('/home/hakatatanoodle/Projects/promt /.env')
-key  = os.getenv('api_key')
+import os
+import re
 
-client = Groq(
-    api_key = key
-    )
+from dotenv import load_dotenv
+from flask import Flask, jsonify, render_template, request, session
+from groq import Groq
+
+# Loads the .env file from the project root.
+# (No hardcoded path here — this works on any machine.)
+load_dotenv()
+
+# Kept as "api_key" as a fallback so your existing .env still works.
+key = os.getenv("GROQ_API_KEY") or os.getenv("api_key")
+
+client = Groq(api_key=key)
+
+# Needed for Flask's signed session cookies (used for per-user history).
+app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key-change-me-in-production")
+
+MODEL = "llama-3.3-70b-versatile"
+# Keep at most this many user/assistant turns of history per session
+# so the context window never fills up and token cost stays bounded.
+MAX_HISTORY_TURNS = 10
 
 system_prompt = """
 You are an expert Prompt Engineering Assistant. Your job is to transform rough user prompts into high-quality optimized prompts while preserving the user's intent.
@@ -66,51 +76,82 @@ When returning the optimized prompt:
 
 """
 
-messages = [
-    {
-        "role": "system",
-        "content": system_prompt
-    }
-]
+
+def parse_model_json(content):
+    """Robustly extract a JSON object from the model's reply.
+
+    LLMs sometimes wrap output in markdown code fences or add stray
+    text around the JSON, which would crash a plain json.loads().
+    """
+    if not content:
+        raise ValueError("Model returned an empty response")
+
+    content = content.strip()
+
+    # 1. If the reply is wrapped in a ```json ... ``` fence, take the inside.
+    fence = re.search(r"```(?:json)?\s*(.*?)```", content, re.DOTALL)
+    if fence:
+        content = fence.group(1).strip()
+
+    # 2. Otherwise, fall back to the first { ... } block in the reply.
+    start = content.find("{")
+    end = content.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        content = content[start:end + 1]
+
+    return json.loads(content)
 
 
-
-app = Flask(__name__)
-
-#decorator - connects a url path to a funciton 
-@app.route('/chat',methods = ['POST'])#methods is used to explicitely tell flask to accept POST
+@app.route('/chat', methods=['POST'])
 def chat():
-    data  = request.get_json()
+    data = request.get_json(silent=True) or {}
+    message = (data.get('message') or '').strip()
+    if not message:
+        return jsonify({"error": "Message cannot be empty."}), 400
+
+    # Per-session history instead of one global list shared by every user.
+    history = session.get('history', [])
+    history.append({"role": "user", "content": message})
+    session['history'] = history
+
     try:
-        messages.append({"role": "user", "content": data['message']})
         response = client.chat.completions.create(
-            messages= messages,
-            model = "llama-3.3-70b-versatile"
-        )   
-        response_message = response.choices[0].message
-        messages.append({"role":"assistant","content":response_message.content})
+            messages=[{"role": "system", "content": system_prompt}] + history,
+            model=MODEL,
+            # Ask Groq to guarantee valid JSON output.
+            response_format={"type": "json_object"},
+        )
+        content = response.choices[0].message.content
+        payload = parse_model_json(content)
     except Exception as e:
         print(f"Error sending message: {e}")
-        return "Error sending message", 500
-    
-    print(response_message.content)
-    return jsonify(json.loads(response_message.content))
+        return jsonify({"error": "Something went wrong on the server. Check the logs."}), 500
+
+    history.append({"role": "assistant", "content": content})
+    # Trim old turns so the conversation doesn't grow forever.
+    session['history'] = history[-MAX_HISTORY_TURNS * 2:]
+
+    return jsonify(payload)
+
+
+@app.route('/reset', methods=['POST'])
+def reset():
+    """Clears the current session's conversation history."""
+    session.pop('history', None)
+    return jsonify({"ok": True})
 
 
 @app.route('/')
 def root():
     return render_template('index.html')
-    
 
 
+if __name__ == '__main__':
+    # host=0.0.0.0 makes the app reachable from other devices on your
+    # network (and the preview environment). debug=True is for dev only.
+    app.run(debug=True, host='0.0.0.0', port=5000)
 
-if __name__ == '__main__':  
-    app.run()
 
-
-
-
-#NOTES 
+# NOTES
 # 1. By default Flask routes only accept GET so you have to explicitly tell it to accept POST.
 # 2. In Flask, anything created at the module level gets created once when the server starts and stays alive as long as the server is running.
-

@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang=" en">
+<html lang="en">
 
 <head>
-    <meta   charset="UTF-8">
+    <meta charset="UTF-8">
     <title>Prompt gen</title>
 
-    <link rel="stylesheet" href="{{url_for('static',filename='style.css')}}"><!--link is self closing-->  
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
 </head>
 
@@ -13,13 +13,12 @@
     <h1>AI PROMPT OPTIMIZER</h1>
     <br>
 
-    <textarea id="prompt" rows="10"  placeholder="Enter your prompt here..."></textarea>
-    <button onclick="sendMessage()">Optimize Prompt</button>
+    <textarea id="prompt" rows="10" placeholder="Enter your prompt here..."></textarea>
+    <button id="send">Optimize Prompt</button>
+    <button id="reset" class="secondary">Reset</button>
     <div id="conversation"></div>
     <div id="final_prompt"></div>
-    <script src="https://cdn.jsdelivr.net/npm/marked@18.0.5/lib/marked.umd.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 
-
-</body> 
+</body>
 </html>
