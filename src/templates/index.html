@@ -3,22 +3,68 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Prompt gen</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt AI — Prompt Optimizer</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
 </head>
 
 <body>
-    <h1>AI PROMPT OPTIMIZER</h1>
-    <br>
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.9L12 3z"/>
+                    <path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9L19 15z"/>
+                </svg>
+            </span>
+            <div class="brand-text">
+                <h1>Prompt AI</h1>
+                <p>Prompt Optimizer</p>
+            </div>
+        </div>
+        <button id="newChat" class="btn ghost" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>New chat</span>
+        </button>
+    </header>
 
-    <textarea id="prompt" rows="10" placeholder="Enter your prompt here..."></textarea>
-    <button id="send">Optimize Prompt</button>
-    <button id="reset" class="secondary">Reset</button>
-    <div id="conversation"></div>
-    <div id="final_prompt"></div>
+    <main class="chat" id="chat">
+        <!-- Zero-state: shows what the tool can do before the user types anything -->
+        <section class="empty-state" id="emptyState">
+            <div class="hero-icon" aria-hidden="true">✨</div>
+            <h2>Turn rough prompts into powerful ones</h2>
+            <p>Paste a rough idea below. I'll ask a couple of quick questions, then hand you an optimized prompt ready for any AI.</p>
+            <div class="examples" id="examples">
+                <button class="chip" type="button">Write a professional cold email</button>
+                <button class="chip" type="button">Generate a SQL query for sales data</button>
+                <button class="chip" type="button">Explain blockchain to a 10-year-old</button>
+                <button class="chip" type="button">Draft a product launch post</button>
+            </div>
+        </section>
+
+        <!-- Conversation stream -->
+        <div class="messages" id="messages" aria-live="polite"></div>
+    </main>
+
+    <footer class="composer-wrap">
+        <div class="composer">
+            <textarea id="prompt" rows="1" placeholder="Paste your rough prompt here…" aria-label="Your prompt"></textarea>
+            <button id="send" class="send-btn" type="button" aria-label="Optimize prompt">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                </svg>
+            </button>
+        </div>
+        <p class="hint">Enter to send · Shift + Enter for a new line · Powered by Groq Llama 3.3</p>
+    </footer>
+
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-
 </body>
+
 </html>
