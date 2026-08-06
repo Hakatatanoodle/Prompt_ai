@@ -313,7 +313,7 @@ button {
     background: color-mix(in srgb, var(--danger) 15%, transparent);
 }
 
-/* question chips inside an AI message */
+/* question chips inside an AI message / question card */
 .msg-questions {
     display: flex;
     flex-wrap: wrap;
@@ -321,16 +321,44 @@ button {
     margin-top: var(--space-2);
 }
 
-/* clarifying-question card (question text + answer option chips) */
-.question {
+/* multi-question answer card: questions + toggle chips + inputs + send */
+.question-card {
     align-self: flex-start;
     max-width: 82%;
     background: var(--bg-elev);
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    border-bottom-left-radius: 4px;
-    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
     animation: rise 0.25s ease both;
+}
+
+.q-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.q-head span:first-child {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.q-head span:last-child {
+    font-size: var(--text-xs);
+    color: var(--text-3);
+}
+
+.question {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
 }
 
 .q-text {
@@ -340,11 +368,51 @@ button {
     word-break: break-word;
 }
 
-.q-tip {
-    align-self: flex-start;
-    margin: 0;
-    font-size: var(--text-xs);
+.chip.selected {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.q-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.q-input::placeholder {
     color: var(--text-3);
+}
+
+.q-input:focus {
+    border-color: var(--accent);
+}
+
+.send-answers {
+    align-self: stretch;
+    padding: 10px 16px;
+    border-radius: var(--radius-pill);
+    background: var(--accent);
+    color: #fff;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.send-answers:hover:not(:disabled) {
+    background: var(--accent-strong);
+}
+
+.send-answers:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
 
 /* warning when the final prompt still contains [placeholders] */
@@ -617,7 +685,7 @@ button {
         padding: var(--space-2) var(--space-3);
     }
     .msg,
-    .question {
+    .question-card {
         max-width: 92%;
     }
     .composer-wrap {

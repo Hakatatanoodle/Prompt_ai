@@ -43,20 +43,66 @@ function addTypingIndicator() {
 
 /* ---------- rendering ---------- */
 
+// Build numbered answer lines from per-question selections, e.g.
+//   1. Partnership
+//   2. Marketing Manager
+// plus a plain-text version for displaying the user's bubble.
+function composeAnswerLines(questions, state) {
+    const lines = [];
+    const display = [];
+    questions.forEach((item, idx) => {
+        const answers = [...state[idx].selected];
+        if (state[idx].custom) answers.push(state[idx].custom);
+        if (answers.length === 0) return; // user skipped this question
+        lines.push(`${idx + 1}. ${answers.join(", ")}`);
+        display.push(answers.join(", "));
+    });
+    return { content: lines.join("\n"), display: display.join("\n") };
+}
+
 function renderQuestions(questions) {
-    questions.forEach((item) => {
-        // Backwards-compatible: accept either a plain string or
+    // One card holds all of this turn's questions so the user can answer
+    // several at once before sending — no more lost answers from chips
+    // that fire immediately.
+    const card = document.createElement("div");
+    card.className = "question-card";
+
+    const head = document.createElement("div");
+    head.className = "q-head";
+    const title = document.createElement("span");
+    title.textContent = "A few quick questions";
+    const hint = document.createElement("span");
+    hint.textContent = "answer what you can";
+    head.appendChild(title);
+    head.appendChild(hint);
+    card.appendChild(head);
+
+    // Per-question state: selected options (multi-select) + free text.
+    const state = questions.map(() => ({ selected: new Set(), custom: "" }));
+
+    const sendBtn = document.createElement("button");
+    sendBtn.className = "send-answers";
+    sendBtn.type = "button";
+    sendBtn.textContent = "Send answers";
+    sendBtn.disabled = true;
+
+    function updateSend() {
+        sendBtn.disabled = !state.some((s) => s.selected.size > 0 || s.custom !== "");
+    }
+
+    questions.forEach((item, idx) => {
+        // Backwards-compatible: accept a plain string or
         // {"question": "...", "options": ["...", "..."]}
         const questionText = typeof item === "string" ? item : (item && item.question) || "";
         const options = typeof item === "string" ? [] : (Array.isArray(item.options) ? item.options : []);
 
-        const block = document.createElement("div");
-        block.className = "question";
+        const q = document.createElement("div");
+        q.className = "question";
 
-        const qText = document.createElement("div");
-        qText.className = "q-text";
-        qText.textContent = questionText;
-        block.appendChild(qText);
+        const label = document.createElement("div");
+        label.className = "q-text";
+        label.textContent = questionText;
+        q.appendChild(label);
 
         if (options.length > 0) {
             const chips = document.createElement("div");
@@ -66,22 +112,49 @@ function renderQuestions(questions) {
                 chip.className = "chip";
                 chip.type = "button";
                 chip.textContent = opt;
-                chip.addEventListener("click", () => sendMessage(opt));
+                chip.addEventListener("click", () => {
+                    if (state[idx].selected.has(opt)) {
+                        state[idx].selected.delete(opt);
+                        chip.classList.remove("selected");
+                    } else {
+                        state[idx].selected.add(opt);
+                        chip.classList.add("selected");
+                    }
+                    updateSend();
+                });
                 chips.appendChild(chip);
             });
-            block.appendChild(chips);
+            q.appendChild(chips);
         }
 
-        messagesEl.appendChild(block);
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "q-input";
+        input.placeholder = options.length > 0 ? "…or type your own answer" : "Type your answer";
+        input.addEventListener("input", () => {
+            state[idx].custom = input.value.trim();
+            updateSend();
+        });
+        // Enter submits the answers
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendBtn.click();
+            }
+        });
+        q.appendChild(input);
+
+        card.appendChild(q);
     });
 
-    if (!window.__chipsTipped) {
-        window.__chipsTipped = true;
-        const tip = document.createElement("p");
-        tip.className = "q-tip";
-        tip.textContent = "Tap an option below, or type your own answer in the box.";
-        messagesEl.appendChild(tip);
-    }
+    sendBtn.addEventListener("click", () => {
+        const { content, display } = composeAnswerLines(questions, state);
+        if (!content) return;
+        sendMessage(content, display);
+    });
+
+    card.appendChild(sendBtn);
+    messagesEl.appendChild(card);
 }
 
 function renderFinal(data) {
@@ -220,7 +293,7 @@ function fallbackCopy(text, done) {
 
 /* ---------- sending ---------- */
 
-async function sendMessage(text) {
+async function sendMessage(text, displayText) {
     const content = (text !== undefined ? text : composer.value).trim();
     if (!content || sending) return;
 
@@ -229,7 +302,7 @@ async function sendMessage(text) {
     lastUserMessage = content;
 
     emptyStateEl.style.display = "none";
-    addMessage(content, "user");
+    addMessage(displayText || content, "user");
     composer.value = "";
     autoGrow();
 
