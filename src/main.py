@@ -65,6 +65,22 @@ MODEL = "llama-3.3-70b-versatile"
 # Keep at most this many user/assistant turns of history per session
 # so the context window never fills up and token cost stays bounded.
 MAX_HISTORY_TURNS = 10
+# How many total model calls to allow when a final prompt contains
+# placeholder brackets like [Name]: the initial generation plus up to
+# this many corrective rewrites. (1 initial + 2 retries = 3 max calls.)
+MAX_PLACEHOLDER_ATTEMPTS = 3
+
+# Placeholder text like [Smartphone Name] or [X] in a final prompt means
+# the deliverable is incomplete — the server catches it and auto-corrects.
+PLACEHOLDER_RE = re.compile(r"\[[^\]]+\]")
+
+PLACEHOLDER_FIX_INSTRUCTION = (
+    "Your previous response contained placeholder text such as [Smartphone Name]. "
+    "That is not acceptable: a final optimized prompt must be complete and usable "
+    "as-is, with every detail filled in. Make one sensible, concrete assumption for "
+    "each missing detail and rewrite the entire optimized prompt with those details "
+    "filled in. Respond with the same JSON format as before (is_final: true)."
+)
 
 system_prompt = """
 You are an expert Prompt Engineering Assistant. Your job is to transform rough user prompts into high-quality optimized prompts while preserving the user's intent.
@@ -95,12 +111,12 @@ Prompt Optimization Guidelines
 
 Clarification Best Practices
 * Ask at most 3 questions per turn, and only the most important ones.
-* For each question, provide 2-4 concrete answer options whenever possible. Use an empty options list only for truly open-ended questions.
+* For each question, provide 2-4 concrete answer options ONLY when they are genuinely useful. If you cannot think of truly concrete options (for example, asking for a name), use an empty options list — never force generic options that do not match the question.
 * Keep your conversational message short (1-2 sentences).
 * Track which questions you have already asked and which have been answered. Never ask the same question twice.
 
 Final Prompt Rules
-* The final prompt must be complete and usable as-is. NEVER leave placeholder text like [Name], [promotion], or [X] in it.
+* HARD REQUIREMENT: the final prompt must be complete and usable as-is. A response containing placeholder text like [Name], [promotion], or [X] is a FAILED response and will be sent back to you for correction. Never use brackets to mark missing information.
 * If a detail is still missing when it is time to generate, ask for it one final time. If the user cannot provide it, make one sensible, concrete assumption and clearly state that assumption in the objective.
 
 Output Rules
@@ -164,19 +180,46 @@ def chat():
     session['history'] = history
 
     try:
-        response = client.chat.completions.create(
-            messages=[{"role": "system", "content": system_prompt}] + history,
-            model=MODEL,
-            # Ask Groq to guarantee valid JSON output.
-            response_format={"type": "json_object"},
-        )
-        content = response.choices[0].message.content
-        payload = parse_model_json(content)
+        payload = None
+        for attempt in range(1, MAX_PLACEHOLDER_ATTEMPTS + 1):
+            response = client.chat.completions.create(
+                messages=[{"role": "system", "content": system_prompt}] + history,
+                model=MODEL,
+                # Ask Groq to guarantee valid JSON output.
+                response_format={"type": "json_object"},
+            )
+            content = response.choices[0].message.content
+            candidate = parse_model_json(content)
+
+            history.append({"role": "assistant", "content": content})
+
+            # Clarification turn — pass through as-is.
+            if not candidate.get("is_final"):
+                payload = candidate
+                break
+
+            # Final prompt without placeholder brackets — done.
+            prompt_text = candidate.get("prompt") or ""
+            if not PLACEHOLDER_RE.search(prompt_text):
+                payload = candidate
+                break
+
+            # Final prompt but still has [placeholders] — auto-correct
+            # and ask the model to rewrite it with concrete details.
+            print(
+                f"[fix] final prompt still has placeholders (attempt {attempt}), "
+                "asking the model to fill them in…"
+            )
+            history.append({"role": "user", "content": PLACEHOLDER_FIX_INSTRUCTION})
+        else:
+            # Retries exhausted — hand back the last attempt; the frontend
+            # shows the placeholder warning so nothing ships silently.
+            print("[fix] gave up after retries; returning last attempt with warning")
+            payload = candidate
     except Exception as e:
         print(f"Error sending message: {e}")
         return jsonify({"error": "Something went wrong on the server. Check the logs."}), 500
 
-    history.append({"role": "assistant", "content": content})
     # Trim old turns so the conversation doesn't grow forever.
     session['history'] = history[-MAX_HISTORY_TURNS * 2:]
 
