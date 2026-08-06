@@ -1,17 +1,31 @@
 import json
 import os
 import re
+from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request, session
 from groq import Groq
 
-# Loads the .env file from the project root.
+# Load .env from the project root, no matter where you run the app from.
 # (No hardcoded path here — this works on any machine.)
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # Kept as "api_key" as a fallback so your existing .env still works.
-key = os.getenv("GROQ_API_KEY") or os.getenv("api_key")
+env_key = os.getenv("GROQ_API_KEY")
+fallback_key = os.getenv("api_key")
+key = (env_key or fallback_key or "").strip()  # strip sneaky trailing spaces/newlines
+
+if not key:
+    raise SystemExit(
+        "\nNo API key found.\n"
+        "  - Create a .env file in the project root (see .env.example)\n"
+        "  - It must contain: GROQ_API_KEY=gsk_...\n"
+        "  - Get a key at https://console.groq.com/keys\n"
+    )
+
+key_source = "GROQ_API_KEY" if env_key else "api_key"
+print(f"[startup] Using API key from {key_source}: {key[:4]}...{key[-4:]} (length {len(key)})")
 
 client = Groq(api_key=key)
 
