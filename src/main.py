@@ -1,19 +1,30 @@
 import json
 import os
 import re
+import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 from flask import Flask, jsonify, render_template, request, session
 from groq import Groq
 
-# Load .env from the project root, no matter where you run the app from.
-# (No hardcoded path here — this works on any machine.)
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
-# Kept as "api_key" as a fallback so your existing .env still works.
-env_key = os.getenv("GROQ_API_KEY")
-fallback_key = os.getenv("api_key")
+# Load .env into the process environment, but NEVER override variables
+# that are already set in your shell. That's how a stray `api_key` env
+# var used to shadow the .env file and send a non-Groq key to Groq.
+load_dotenv(ENV_FILE)
+
+# Also read the .env file's raw contents so we can tell exactly where
+# each value came from (shell environment vs .env file).
+file_values = dotenv_values(ENV_FILE)
+
+# 1) Prefer GROQ_API_KEY — from the shell environment OR the .env file.
+env_key = os.getenv("GROQ_API_KEY") or file_values.get("GROQ_API_KEY")
+# 2) Fall back to `api_key` ONLY when it is written in the .env file
+#    itself. An `api_key` exported in your shell is NEVER used, because
+#    it's usually some other service's key and breaks Groq auth (401).
+fallback_key = file_values.get("api_key")
 key = (env_key or fallback_key or "").strip()  # strip sneaky trailing spaces/newlines
 
 if not key:
@@ -24,7 +35,24 @@ if not key:
         "  - Get a key at https://console.groq.com/keys\n"
     )
 
-key_source = "GROQ_API_KEY" if env_key else "api_key"
+key_source = "GROQ_API_KEY" if env_key else "api_key (from .env)"
+
+# Heads-up if a shell `api_key` exists but is no longer being used.
+if os.getenv("api_key") and key_source.startswith("GROQ_API_KEY"):
+    print(
+        "[startup] Note: an 'api_key' is set in your shell environment but it is "
+        "ignored now (it was shadowing .env before). Using GROQ_API_KEY instead.",
+        file=sys.stderr,
+    )
+
+# Groq keys always start with gsk_ — anything else is a different service's key.
+if not key.startswith("gsk_"):
+    print(
+        "[startup] WARNING: this key does not start with 'gsk_' — it does not look "
+        "like a Groq API key, so Groq will likely reject it (401).",
+        file=sys.stderr,
+    )
+
 print(f"[startup] Using API key from {key_source}: {key[:4]}...{key[-4:]} (length {len(key)})")
 
 client = Groq(api_key=key)
