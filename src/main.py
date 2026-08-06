@@ -82,6 +82,19 @@ PLACEHOLDER_FIX_INSTRUCTION = (
     "filled in. Respond with the same JSON format as before (is_final: true)."
 )
 
+# Sent when the user sends a new message after a final prompt was already
+# delivered: tells the model to treat a fresh rough prompt as a NEW task
+# instead of continuing the previous conversation.
+NEW_TASK_NUDGE = (
+    "NOTE: You already delivered a final optimized prompt earlier in this "
+    "conversation. If the user's latest message is a new rough prompt — a different "
+    "task, or a repeat/rephrasing of the earlier task — treat it as a NEW "
+    "optimization: ignore all previous answers and analyze the new prompt from "
+    "scratch, asking fresh questions if details are missing. Only continue the "
+    "previous conversation if the user is explicitly asking you to modify, refine, "
+    "or discuss the prompt you just delivered."
+)
+
 system_prompt = """
 You are an expert Prompt Engineering Assistant. Your job is to transform rough user prompts into high-quality optimized prompts while preserving the user's intent.
 
@@ -119,6 +132,11 @@ Clarification Best Practices
 Final Prompt Rules
 * HARD REQUIREMENT: the final prompt must be complete and usable as-is. A response containing placeholder text like [Name], [promotion], or [X] is a FAILED response and will be sent back to you for correction. Never use brackets to mark missing information.
 * If a detail is still missing when it is time to generate, ask for it one final time. If the user cannot provide it, make one sensible, concrete assumption and clearly state that assumption in the objective.
+* NEVER invent proper nouns: names of people, companies, products, or brands (e.g. 'Emily Chen', 'GreenTech', 'NovaSpire'). These must come from the user. If a name or company is needed and missing, ASK for it. Only if the user explicitly authorizes you to invent examples may you use clearly fictional names — and then the objective must state that they are example names.
+
+New Task Handling
+* After you deliver a final optimized prompt, if the user's next message is a new rough prompt (a different task, or a repeat of the earlier one), treat it as a NEW optimization: ignore all previous answers, analyze the new prompt from scratch, and ask fresh questions if details are missing.
+* Only continue the previous conversation when the user asks to modify, refine, or discuss the prompt you just delivered.
 
 Output Rules
 Every response must be valid raw JSON.
@@ -180,11 +198,20 @@ def chat():
     history.append({"role": "user", "content": message})
     session['history'] = history
 
+    # If a final prompt was already delivered, the next message may be a
+    # NEW task — nudge the model to start fresh rather than reuse answers.
+    needs_new_task_nudge = session.pop('needs_new_task_nudge', False)
+
     try:
         payload = None
         for attempt in range(1, MAX_PLACEHOLDER_ATTEMPTS + 1):
+            model_messages = [{"role": "system", "content": system_prompt}]
+            if needs_new_task_nudge:
+                model_messages.append({"role": "system", "content": NEW_TASK_NUDGE})
+            model_messages += history
+
             response = client.chat.completions.create(
-                messages=[{"role": "system", "content": system_prompt}] + history,
+                messages=model_messages,
                 model=MODEL,
                 # Ask Groq to guarantee valid JSON output.
                 response_format={"type": "json_object"},
@@ -224,6 +251,11 @@ def chat():
     # Trim old turns so the conversation doesn't grow forever.
     session['history'] = history[-MAX_HISTORY_TURNS * 2:]
 
+    # If we just delivered a final prompt, the NEXT user message might be
+    # a new task — set the flag so we can nudge the model accordingly.
+    if payload and payload.get("is_final"):
+        session['needs_new_task_nudge'] = True
+
     return jsonify(payload)
 
 
@@ -231,6 +263,7 @@ def chat():
 def reset():
     """Clears the current session's conversation history."""
     session.pop('history', None)
+    session.pop('needs_new_task_nudge', None)
     return jsonify({"ok": True})
 
 

@@ -415,6 +415,17 @@ button {
     cursor: default;
 }
 
+.new-opt {
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--space-3);
+    color: var(--text-3);
+}
+
+.new-opt:hover {
+    color: var(--text);
+}
+
 /* warning when the final prompt still contains [placeholders] */
 .placeholder-warn {
     margin-top: var(--space-2);

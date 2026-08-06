@@ -230,6 +230,15 @@ function renderFinal(data) {
         card.appendChild(warn);
     }
 
+    // Clear affordance: a delivered prompt ends the task. Next rough
+    // prompt should start fresh — this button makes that explicit.
+    const startNew = document.createElement("button");
+    startNew.className = "btn ghost new-opt";
+    startNew.type = "button";
+    startNew.textContent = "↺ Start a new optimization";
+    startNew.addEventListener("click", newChat);
+    card.appendChild(startNew);
+
     messagesEl.appendChild(card);
 }
 
