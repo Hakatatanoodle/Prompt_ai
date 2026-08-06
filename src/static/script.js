@@ -44,17 +44,44 @@ function addTypingIndicator() {
 /* ---------- rendering ---------- */
 
 function renderQuestions(questions) {
-    const wrap = document.createElement("div");
-    wrap.className = "msg-questions";
-    questions.forEach((q) => {
-        const chip = document.createElement("button");
-        chip.className = "chip";
-        chip.type = "button";
-        chip.textContent = q;
-        chip.addEventListener("click", () => sendMessage(q));
-        wrap.appendChild(chip);
+    questions.forEach((item) => {
+        // Backwards-compatible: accept either a plain string or
+        // {"question": "...", "options": ["...", "..."]}
+        const questionText = typeof item === "string" ? item : (item && item.question) || "";
+        const options = typeof item === "string" ? [] : (Array.isArray(item.options) ? item.options : []);
+
+        const block = document.createElement("div");
+        block.className = "question";
+
+        const qText = document.createElement("div");
+        qText.className = "q-text";
+        qText.textContent = questionText;
+        block.appendChild(qText);
+
+        if (options.length > 0) {
+            const chips = document.createElement("div");
+            chips.className = "msg-questions";
+            options.forEach((opt) => {
+                const chip = document.createElement("button");
+                chip.className = "chip";
+                chip.type = "button";
+                chip.textContent = opt;
+                chip.addEventListener("click", () => sendMessage(opt));
+                chips.appendChild(chip);
+            });
+            block.appendChild(chips);
+        }
+
+        messagesEl.appendChild(block);
     });
-    messagesEl.appendChild(wrap);
+
+    if (!window.__chipsTipped) {
+        window.__chipsTipped = true;
+        const tip = document.createElement("p");
+        tip.className = "q-tip";
+        tip.textContent = "Tap an option below, or type your own answer in the box.";
+        messagesEl.appendChild(tip);
+    }
 }
 
 function renderFinal(data) {
@@ -116,6 +143,19 @@ function renderFinal(data) {
     if (objectiveEl) card.appendChild(objectiveEl);
     card.appendChild(box);
     if (originalToggle) card.appendChild(originalToggle);
+
+    // Safety net: if the model left placeholder brackets like [Name]
+    // in the prompt, surface it so the user doesn't copy junk.
+    const placeholders = (data.prompt || "").match(/\[[^\]]+\]/g);
+    if (placeholders) {
+        const warn = document.createElement("div");
+        warn.className = "placeholder-warn";
+        warn.textContent =
+            "⚠️ This prompt still has unfilled placeholders like " +
+            placeholders[0] +
+            " — ask the assistant to fill them in before using it.";
+        card.appendChild(warn);
+    }
 
     messagesEl.appendChild(card);
 }

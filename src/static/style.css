@@ -321,6 +321,43 @@ button {
     margin-top: var(--space-2);
 }
 
+/* clarifying-question card (question text + answer option chips) */
+.question {
+    align-self: flex-start;
+    max-width: 82%;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    border-bottom-left-radius: 4px;
+    padding: 12px 14px;
+    animation: rise 0.25s ease both;
+}
+
+.q-text {
+    font-size: var(--text-base);
+    line-height: var(--line-body);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.q-tip {
+    align-self: flex-start;
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--text-3);
+}
+
+/* warning when the final prompt still contains [placeholders] */
+.placeholder-warn {
+    margin-top: var(--space-2);
+    padding: 8px 12px;
+    background: var(--danger-soft);
+    border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+    border-radius: var(--radius-sm);
+    color: var(--danger);
+    font-size: var(--text-sm);
+}
+
 /* ---------- typing indicator ---------- */
 
 .typing {
@@ -579,7 +616,8 @@ button {
     .topbar {
         padding: var(--space-2) var(--space-3);
     }
-    .msg {
+    .msg,
+    .question {
         max-width: 92%;
     }
     .composer-wrap {
